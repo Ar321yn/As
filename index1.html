@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="shortcut icon" type="x-icon" href="Logo.png">
+    <meta charset="UTF-8">
+    <title>AZLANS</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, green, red, green);
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        h1 {
+            font-size: 75px;
+            color: gold;
+            text-shadow: 5px 1px grey;
+        }
+        #chat-container {
+            background: #ffffffdd;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px 5px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+        }
+        input {
+            width: 60%;
+        }
+        button {
+            background-color: #66a6ff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #4b79a1;
+        }
+        #response-output {
+            background-color: #f1f1f1;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .icon-button {
+            background-color: transparent;
+            margin-left: 5px;
+            padding: 5px;
+        }
+        .icon-button img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .icon-button:hover img {
+            transform: scale(1.2);
+        }
+        .sng {
+            border: grey 5px solid;
+        }
+    </style>
+</head>
+<body>
+    <img class="sng" src="bg.png" width="250" height="140">
+    <h1>ARYAN</h1>
+    <div id="chat-container">
+        <input type="text" id="prompt-input" placeholder="Ask me Anything.......">
+        <button id="send-button">Send</button>
+        <button id="mic-button" class="icon-button">
+            <img src="va.png" alt="Mic">
+        </button>
+        <button id="speaker-button" class="icon-button">🔊</button>
+        <div id="response-output"><pre></pre></div>
+    </div>
+
+    <script>
+        const promptInput = document.getElementById('prompt-input');
+        const sendButton = document.getElementById('send-button');
+        const micButton = document.getElementById('mic-button');
+        const speakerButton = document.getElementById('speaker-button');
+        const responseOutput = document.querySelector('#response-output pre');
+        let lastResponse = '';
+
+        // === Custom Reply Checker ===
+        function checkCustomReply(prompt) {
+            const lower = prompt.toLowerCase();
+            if (lower.includes('who made you') || lower.includes('who created you')) {
+                return "I am made by ARYAN ABRAR CHOWDHURY.";
+            }
+            return null;
+        }
+
+        // === Send Prompt to Gemini API ===
+        async function sendPrompt(prompt) {
+            const customReply = checkCustomReply(prompt);
+            if (customReply) {
+                responseOutput.textContent = customReply;
+                lastResponse = customReply;
+                return;
+            }
+
+            responseOutput.textContent = 'Loading...';
+            lastResponse = '';
+            try {
+                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDVgHE9GiqreTh8IwoNluoVMSH8YOpCfiE', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || 'API request failed');
+                }
+
+                const data = await response.json();
+                const chatResponse = data.candidates[0]?.content?.parts[0]?.text || "No response.";
+                responseOutput.textContent = chatResponse;
+                lastResponse = chatResponse;
+            } catch (error) {
+                console.error('Error:', error);
+                responseOutput.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // === Handle Text Send ===
+        sendButton.addEventListener('click', () => {
+            const prompt = promptInput.value.trim();
+            if (prompt) {
+                sendPrompt(prompt);
+            } else {
+                responseOutput.textContent = 'Please enter a prompt.';
+            }
+        });
+
+        // === Speaker Button: Read Out AI Response ===
+        speakerButton.addEventListener('click', () => {
+            if (!lastResponse) {
+                alert('No response to read yet!');
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(lastResponse);
+            speechSynthesis.speak(utterance);
+        });
+
+        // === Mic Button: Speech Recognition ===
+        micButton.addEventListener('click', () => {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Speech Recognition not supported!');
+                return;
+            }
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.start();
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                promptInput.value = transcript;
+                sendPrompt(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                responseOutput.textContent = `Speech recognition error: ${event.error}`;
+            };
+        });
+    </script>
+    <footer>
+         <p style="font-size: 14px; color: blue;">© Credits to Aryan Abrar Chowdhury.Powered by ARYAN</p>
+
+    </footer>
+   
+</body>
+</html>
